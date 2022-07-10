@@ -1,0 +1,1 @@
+aws secretsmanager put-secret-value --secret-id GITHUB_ACCESS --secret-string file://../local-files/git-token.json
