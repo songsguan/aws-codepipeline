@@ -62,7 +62,7 @@ Resources:
       Source:
         Type: GITHUB
         Location: https://github.com/songsguan/aws-codepipeline.git
-        BuildSpec: buildspec.yaml
+        BuildSpec: cloudformation/buildspec.yaml
         Auth:
           Type: OAUTH
           Resource: !Ref CodeBuildSourceCredential
