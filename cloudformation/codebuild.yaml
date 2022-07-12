@@ -157,6 +157,60 @@ Resources:
         Status: Enabled
 
 
+  CodeDeployProjectDev:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Name: !Sub '${AWS::StackName}-deploy-dev'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: cloudformation/deployspec.yaml
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        EnvironmentVariables:
+          - Name: ENV_NAME
+            Value: dev2
+
+  CodeDeployProjectQA:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Name: !Sub '${AWS::StackName}-deploy-qa'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: cloudformation/deployspec.yaml
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        EnvironmentVariables:
+          - Name: ENV_NAME
+            Value: qa
+
+  CodeDeployProjectProd:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Name: !Sub '${AWS::StackName}-deploy-prod'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: cloudformation/deployspec.yaml
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        EnvironmentVariables:
+          - Name: ENV_NAME
+            Value: prod
+
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -182,7 +236,6 @@ Resources:
                 Branch: !Ref GitHubBaseBranch
                 OAuthToken: "{{resolve:secretsmanager:GITHUB_ACCESS:SecretString:GITHUB_ACCESS_TOKEN}}"
                 PollForSourceChanges: false  # set to be false, then github hook will be used
-              RunOrder: 1
 
         - Name: Build
           Actions:
@@ -202,7 +255,57 @@ Resources:
                 - Name: BuildOutput
               InputArtifacts:
                 - Name: SourceCode
+
+        - Name: Dev
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeDeployProjectDev
+              InputArtifacts:
+                - Name: BuildOutput
+
+        - Name: QA
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeDeployProjectQA
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+            - Name: Approval
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+              Configuration:
+                CustomData: Approve or Reject this change after running test in QA
               RunOrder: 2
+
+
+        - Name: Prod
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeDeployProjectProd
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 3
 
   CodePipelineWebhook:
     Type: 'AWS::CodePipeline::Webhook'
