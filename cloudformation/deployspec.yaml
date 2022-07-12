@@ -1,0 +1,17 @@
+version: 0.2
+
+env:
+  variables:
+    ENV_NAME: dev
+
+phases:
+  build:
+#    run-as: Linux-user-name
+#    on-failure: ABORT | CONTINUE
+    commands:
+      - echo "hello CodeDeploy "
+      - echo Deploying to ${ENV_NAME} ...
+
+artifacts:
+  files:
+    - '**/*'
