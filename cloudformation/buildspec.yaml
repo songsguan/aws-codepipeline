@@ -53,6 +53,7 @@ phases:
 #    on-failure: ABORT | CONTINUE
     commands:
       - echo "hello CodeBuild "
+      - echo "chec env CODEBUILD_SRC_DIR ${CODEBUILD_SRC_DIR}"
 #    finally:
 #      - command
 #      - command
