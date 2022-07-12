@@ -1,4 +1,20 @@
 AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  GitHubOwner:
+    Description: github owner
+    Type: String
+    Default: songsguan
+
+  GitHubRepo:
+    Description: github repo
+    Type: String
+    Default: aws-codepipeline
+
+  GitHubBaseBranch:
+    Description: github base branch
+    Type: String
+    Default: main
+
 Resources:
   CodeBuildServiceRole:
     Type: 'AWS::IAM::Role'
@@ -80,3 +96,127 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:4.0
+
+
+  CodePipelineServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: codepipeline.amazonaws.com
+              Action: 'sts:AssumeRole'
+        Path: /
+        Policies:
+          - PolicyName: root
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Sid: CloudWatchLogsPolicy
+                  Effect: Allow
+                  Action:
+                    - 'logs:CreateLogGroup'
+                    - 'logs:CreateLogStream'
+                    - 'logs:PutLogEvents'
+                  Resource: '*'
+                - Sid: CodeCommitPolicy
+                  Effect: Allow
+                  Action:
+                    - 'codecommit:GitPull'
+                  Resource: '*'
+                - Sid: S3GetObjectPolicy
+                  Effect: Allow
+                  Action:
+                    - 's3:GetObject'
+                    - 's3:GetObjectVersion'
+                  Resource: '*'
+                - Sid: S3PutObjectPolicy
+                  Effect: Allow
+                  Action:
+                    - 's3:PutObject'
+                  Resource: '*'
+                - Sid: S3BucketIdentity
+                  Effect: Allow
+                  Action:
+                    - 's3:GetBucketAcl'
+                    - 's3:GetBucketLocation'
+                  Resource: '*'
+                - Sid: CodeBuildPolicy
+                  Effect: Allow
+                  Action:
+                    - "codebuild:BatchGetBuilds"
+                    - "codebuild:StartBuild"
+                  Resource: '*'
+
+  CodePipelineArtifactsStore:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+
+
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Ref "AWS::StackName"
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref CodePipelineArtifactsStore
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              OutputArtifacts:
+                - Name: SourceCode
+              Configuration:
+                Owner: !Ref GitHubOwner
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBaseBranch
+                OAuthToken: "{{resolve:secretsmanager:GITHUB_ACCESS:SecretString:GITHUB_ACCESS_TOKEN}}"
+                PollForSourceChanges: false  # set to be false, then github hook will be used
+              RunOrder: 1
+
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+#                BatchEnabled: 'true'
+#                CombineArtifacts: 'true'
+                ProjectName: !Ref CodeBuildProject
+#                PrimarySource: MyApplicationSource1
+#                EnvironmentVariables: '[{"name":"TEST_VARIABLE","value":"TEST_VALUE","type":"PLAINTEXT"},{"name":"ParamStoreTest","value":"PARAMETER_NAME","type":"PARAMETER_STORE"}]'
+              OutputArtifacts:
+                - Name: BuildOutput
+              InputArtifacts:
+                - Name: SourceCode
+              RunOrder: 2
+
+  CodePipelineWebhook:
+    Type: 'AWS::CodePipeline::Webhook'
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: "{{resolve:secretsmanager:GITHUB_ACCESS:SecretString:GITHUB_ACCESS_TOKEN}}"
+      Filters:
+        - JsonPath: '$.ref'
+          MatchEquals: refs/heads/{Branch}
+        - JsonPath: '$.repository.name'
+          MatchEquals: '{Repo}'
+      Name: CodePipelineWebHook-name
+      RegisterWithThirdParty: true
+      TargetAction: SourceAction
+      TargetPipeline: !Ref CodePipeline
+      TargetPipelineVersion: !GetAtt CodePipeline.Version
