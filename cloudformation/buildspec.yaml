@@ -53,8 +53,7 @@ phases:
 #    on-failure: ABORT | CONTINUE
     commands:
       - echo "hello CodeBuild "
-      - echo "chec env CODEBUILD_SRC_DIR ${CODEBUILD_SRC_DIR}"
-      - touch test-artifacts.txt
+      - echo "chec env CODEBUILD_SRC_DIR ${CODEBUILD_SRC_DIR}" > new_artifacts
 #    finally:
 #      - command
 #      - command
