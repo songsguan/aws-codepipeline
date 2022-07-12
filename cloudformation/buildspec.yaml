@@ -66,3 +66,7 @@ phases:
 #    finally:
 #      - command
 #      - command
+artifacts:
+  files:
+    - '**/*'
+
