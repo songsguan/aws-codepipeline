@@ -54,6 +54,7 @@ phases:
     commands:
       - echo "hello CodeBuild "
       - echo "chec env CODEBUILD_SRC_DIR ${CODEBUILD_SRC_DIR}"
+      - touch test-artifacts.txt
 #    finally:
 #      - command
 #      - command

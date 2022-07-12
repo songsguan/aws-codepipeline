@@ -126,22 +126,27 @@ Resources:
                   Action:
                     - 'codecommit:GitPull'
                   Resource: '*'
-                - Sid: S3GetObjectPolicy
+#                - Sid: S3GetObjectPolicy
+#                  Effect: Allow
+#                  Action:
+#                    - 's3:GetObject'
+#                    - 's3:GetObjectVersion'
+#                  Resource: '*'
+#                - Sid: S3PutObjectPolicy
+#                  Effect: Allow
+#                  Action:
+#                    - 's3:PutObject'
+#                  Resource: '*'
+#                - Sid: S3BucketIdentity
+#                  Effect: Allow
+#                  Action:
+#                    - 's3:GetBucketAcl'
+#                    - 's3:GetBucketLocation'
+#                  Resource: '*'
+                - Sid: S3admin
                   Effect: Allow
                   Action:
-                    - 's3:GetObject'
-                    - 's3:GetObjectVersion'
-                  Resource: '*'
-                - Sid: S3PutObjectPolicy
-                  Effect: Allow
-                  Action:
-                    - 's3:PutObject'
-                  Resource: '*'
-                - Sid: S3BucketIdentity
-                  Effect: Allow
-                  Action:
-                    - 's3:GetBucketAcl'
-                    - 's3:GetBucketLocation'
+                    - 's3:*'
                   Resource: '*'
                 - Sid: CodeBuildPolicy
                   Effect: Allow
@@ -229,7 +234,7 @@ Resources:
                 Version: 1
                 Provider: GitHub
               OutputArtifacts:
-                - Name: SourceCode
+                - Name: SourceCode-sgtst
               Configuration:
                 Owner: !Ref GitHubOwner
                 Repo: !Ref GitHubRepo
@@ -252,9 +257,9 @@ Resources:
 #                PrimarySource: MyApplicationSource1
 #                EnvironmentVariables: '[{"name":"TEST_VARIABLE","value":"TEST_VALUE","type":"PLAINTEXT"},{"name":"ParamStoreTest","value":"PARAMETER_NAME","type":"PARAMETER_STORE"}]'
               OutputArtifacts:
-                - Name: BuildOutput
+                - Name: BuildOutput-sgtst
               InputArtifacts:
-                - Name: SourceCode
+                - Name: SourceCode-sgtst
 
         - Name: Dev
           Actions:
